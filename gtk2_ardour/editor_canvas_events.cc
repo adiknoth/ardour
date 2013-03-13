@@ -26,6 +26,7 @@
 
 #include "ardour/midi_region.h"
 #include "ardour/region_factory.h"
+#include "ardour/profile.h"
 
 #include "editor.h"
 #include "keyboard.h"
@@ -994,7 +995,7 @@ Editor::canvas_note_event (GdkEvent *event, ArdourCanvas::Item* item)
 }
 
 bool
-Editor::track_canvas_drag_motion (Glib::RefPtr<Gdk::DragContext> const & /*c*/, int x, int y, guint /*time*/)
+Editor::track_canvas_drag_motion (Glib::RefPtr<Gdk::DragContext> const &context, int x, int y, guint time)
 {
 	double wx;
 	double wy;
@@ -1012,6 +1013,15 @@ Editor::track_canvas_drag_motion (Glib::RefPtr<Gdk::DragContext> const & /*c*/, 
 		double px;
 		double py;
 		framepos_t const pos = event_frame (&event, &px, &py);
+
+		if (Profile->get_sae() || Config->get_only_copy_imported_files()) {
+			context->drag_status(Gdk::ACTION_COPY, time);
+		} else {
+			if ((context->get_actions() & (Gdk::ACTION_COPY | Gdk::ACTION_LINK | Gdk::ACTION_MOVE)) == Gdk::ACTION_COPY)
+				context->drag_status(Gdk::ACTION_COPY, time);
+			else
+				context->drag_status(Gdk::ACTION_LINK, time);
+		}
 
 		std::pair<TimeAxisView*, int> const tv = trackview_by_y_position (py);
 		if (tv.first == 0) {
